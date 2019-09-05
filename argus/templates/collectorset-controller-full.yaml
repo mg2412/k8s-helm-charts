@@ -1,0 +1,123 @@
+/--
+# Source: collectorset-controller/templates/secret.yaml
+apiVersion: v1
+kind: Secret
+metadata:
+  name: collectorset-controller
+type: Opaque
+data:
+  accessID: WmdlNTUySHZDOEY4NlA5MzZKS2U=
+  accessKey: Ml9nZ19EZXMpcSVeQXFFalQpQiU3YT0oRDVhcjk1ZTJtPTl5NjlhVA==
+  account: Y2RrZ2xvYmFs
+  etcdDiscoveryToken: ""
+---
+# Source: collectorset-controller/templates/configmap.yaml
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: collectorset-controller
+data:
+  config.yaml: |
+    debug: false
+---
+# Source: collectorset-controller/templates/serviceaccount.yaml
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: collectorset-controller
+  namespace: cloudplatform
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: collector
+  namespace: cloudplatform
+
+---
+# Source: collectorset-controller/templates/crd.yaml
+apiVersion: apiextensions.k8s.io/v1beta1
+kind: CustomResourceDefinition
+metadata:
+  name: collectorsets.logicmonitor.com
+spec:
+  group: logicmonitor.com
+  names:
+    kind: CollectorSet
+    listKind: CollectorSetList
+    plural: collectorsets
+    singular: collectorset
+  scope: Namespaced
+  version: v1alpha1
+
+---
+# Source: collectorset-controller/templates/service.yaml
+kind: Service
+apiVersion: v1
+metadata:
+  name: collectorset-controller
+spec:
+  selector:
+    app: collectorset-controller
+  ports:
+  - protocol: TCP
+    port: 50000
+    targetPort: 50000
+
+---
+# Source: collectorset-controller/templates/deployment.yaml
+apiVersion: extensions/v1beta1
+kind: Deployment
+metadata:
+  name: collectorset-controller
+  labels:
+    chart: "collectorset-controller"
+spec:
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: collectorset-controller
+    spec:
+      serviceAccountName: collectorset-controller
+      containers:
+      - name: collectorset-controller
+        image: "logicmonitor/collectorset-controller:latest"
+        imagePullPolicy: Always
+        env:
+        - name: ACCESS_ID
+          valueFrom:
+            secretKeyRef:
+              name: collectorset-controller
+              key: accessID
+        - name: ACCESS_KEY
+          valueFrom:
+            secretKeyRef:
+              name: collectorset-controller
+              key: accessKey
+        - name: ACCOUNT
+          valueFrom:
+            secretKeyRef:
+              name: collectorset-controller
+              key: account
+        - name: ETCD_DISCOVERY_TOKEN
+          valueFrom:
+            secretKeyRef:
+              name: collectorset-controller
+              key: etcdDiscoveryToken
+        volumeMounts:
+        - name: etc-collectorset-controller
+          mountPath: "/etc/collectorset-controller"
+          readOnly: true
+      volumes:
+      - name: etc-collectorset-controller
+        projected:
+          sources:
+          - configMap:
+              name: collectorset-controller
+              items:
+                - key: config.yaml
+                  path: config.yaml
+
+---
+# Source: collectorset-controller/templates/rbac.yaml
