@@ -1,0 +1,112 @@
+---
+# Source: argus/templates/secret.yaml
+apiVersion: v1
+kind: Secret
+metadata:
+  name: argus
+type: Opaque
+data:
+  accessID: WmdlNTUySHZDOEY4NlA5MzZKS2U=
+  accessKey: Ml9nZ19EZXMpcSVeQXFFalQpQiU3YT0oRDVhcjk1ZTJtPTl5NjlhVA==
+  account: Y2RrZ2xvYmFs
+  etcdDiscoveryToken: ""
+---
+# Source: argus/templates/configmap.yaml
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: argus
+data:
+  config.yaml: |
+    address: collectorset-controller:50000
+    cluster_name: lab1-ord
+    debug: false
+    delete_devices: true
+    disable_alerting: false
+    etcd_discovery_token: 
+    cluster_group_id: 
+---
+# Source: argus/templates/serviceaccount.yaml
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: argus
+  namespace: cloudplatform
+
+---
+# Source: argus/templates/deployment.yaml
+apiVersion: extensions/v1beta1
+kind: Deployment
+metadata:
+  name: argus
+  labels:
+    chart: "argus"
+    app: "argus"
+  namespace: cloudplatform
+spec:
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: argus
+    spec:
+      serviceAccountName: argus
+      containers:
+      - name: argus
+        image: "logicmonitor/argus:latest"
+        imagePullPolicy: Always
+        args:
+          - watch
+        env:
+        - name: ACCESS_ID
+          valueFrom:
+            secretKeyRef:
+              name: argus
+              key: accessID
+        - name: ACCESS_KEY
+          valueFrom:
+            secretKeyRef:
+              name: argus
+              key: accessKey
+        - name: ACCOUNT
+          valueFrom:
+            secretKeyRef:
+              name: argus
+              key: account
+        - name: ETCD_DISCOVERY_TOKEN
+          valueFrom:
+            secretKeyRef:
+              name: argus
+              key: etcdDiscoveryToken
+        volumeMounts:
+        - name: etc-argus
+          mountPath: "/etc/argus"
+          readOnly: true
+      volumes:
+      - name: etc-argus
+        projected:
+          sources:
+          - configMap:
+              name: argus
+              items:
+                - key: config.yaml
+                  path: config.yaml
+
+---
+# Source: argus/templates/collectorset.yaml
+#apiVersion: logicmonitor.com/v1alpha1
+#kind: CollectorSet
+#metadata:
+#  name: lab1-ord
+#  namespace: cloudplatform
+#spec:
+#  policy:
+#    distributionStrategy: RoundRobin
+#    orchestrator: Kubernetes
+#  replicas: 1
+#  size: small
+#  clusterName: lab1-ord
+---
+# Source: argus/templates/rbac.yaml
+
