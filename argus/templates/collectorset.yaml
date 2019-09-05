@@ -2,7 +2,7 @@ apiVersion: logicmonitor.com/v1alpha1
 kind: CollectorSet
 metadata:
   name: lab1-ord
-  namespace: {{ .Release.Namespace }}
+  namespace: cloudplatform
 spec:
   policy:
     distributionStrategy: RoundRobin
