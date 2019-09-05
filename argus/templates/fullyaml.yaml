@@ -1,0 +1,215 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: argus
+data:
+  config.yaml: |
+    address: collectorset-controller:50000
+    cluster_name: lab1-ord
+    debug: false
+    delete_devices: true
+    disable_alerting: false
+    etcd_discovery_token: 
+    cluster_group_id: 
+---
+apiVersion: extensions/v1beta1
+kind: Deployment
+metadata:
+  name: argus
+  labels:
+    chart: "argus"
+spec:
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: argus
+    spec:
+      serviceAccountName: argus
+      affinity:
+      #to be vaildated
+      nodeSelector:
+      containers:
+      - name: argus
+        image: logicmonitor/argus
+        imagePullPolicy: Always
+        args:
+          - watch
+        env:
+        - name: ACCESS_ID
+          valueFrom:
+            secretKeyRef:
+              name: argus
+              key: accessID
+        - name: ACCESS_KEY
+          valueFrom:
+            secretKeyRef:
+              name: argus
+              key: accessKey
+        - name: ACCOUNT
+          valueFrom:
+            secretKeyRef:
+              name: argus
+              key: account
+        - name: ETCD_DISCOVERY_TOKEN
+          valueFrom:
+            secretKeyRef:
+              name: argus
+              key: etcdDiscoveryToken
+        volumeMounts:
+        - name: etc-argus
+          mountPath: "/etc/argus"
+          readOnly: true
+      volumes:
+      - name: etc-argus
+        projected:
+          sources:
+          - configMap:
+              name: argus
+              items:
+                - key: config.yaml
+                  path: config.yaml
+---
+kind: Service
+apiVersion: v1
+metadata:
+  name: collectorset-controller
+spec:
+  selector:
+    app: collectorset-controller
+  ports:
+  - protocol: TCP
+    port: 50000
+    targetPort: 50000
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: collectorset-controller
+  namespace: cloudplatform
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: collector
+  namespace: cloudplatform
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: argus
+type: Opaque
+data:
+  accessID: 2ncvPufefCX9vtEL3Lx9
+  accessKey: ~27~WdH2qZwi(z86nux6~[Bf(9RW]yi2r6z[PCFS
+  account: cdkglobal
+  etcdDiscoveryToken: "" 
+  #to be validated
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: {{ required "A valid .Values.collector.secretName entry is required!" .Values.collector.secretName }}
+type: Opaque
+data:
+  proxyUser: 
+  proxyPass: 
+# to be validated proxy user and pass can keep blank
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: argus
+  namespace: cloudplatform
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: collectorset-controller
+data:
+  config.yaml: |
+    debug: false
+---
+apiVersion: apiextensions.k8s.io/v1beta1
+kind: CustomResourceDefinition
+metadata:
+  name: collectorsets.logicmonitor.com
+spec:
+  group: logicmonitor.com
+  names:
+    kind: CollectorSet
+    listKind: CollectorSetList
+    plural: collectorsets
+    singular: collectorset
+  scope: Namespaced
+  version: v1alpha1
+---
+apiVersion: extensions/v1beta1
+kind: Deployment
+metadata:
+  name: collectorset-controller
+  labels:
+    chart: "collectorset-controller"
+spec:
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: collectorset-controller
+    spec:
+      serviceAccountName: collectorset-controller
+      affinity:
+      nodeSelector:
+      containers:
+      - name: collectorset-controller
+        image: logicmonitor/collectorset-controller:latest.v1
+        imagePullPolicy: Always
+        env:
+        - name: ACCESS_ID
+          valueFrom:
+            secretKeyRef:
+              name: collectorset-controller
+              key: accessID
+        - name: ACCESS_KEY
+          valueFrom:
+            secretKeyRef:
+              name: collectorset-controller
+              key: accessKey
+        - name: ACCOUNT
+          valueFrom:
+            secretKeyRef:
+              name: collectorset-controller
+              key: account
+        - name: ETCD_DISCOVERY_TOKEN
+          valueFrom:
+            secretKeyRef:
+              name: collectorset-controller
+              key: etcdDiscoveryToken
+  # to vaslidate does proxy user and pass exist or not
+        volumeMounts:
+        - name: etc-collectorset-controller
+          mountPath: "/etc/collectorset-controller"
+          readOnly: true
+      volumes:
+      - name: etc-collectorset-controller
+        projected:
+          sources:
+          - configMap:
+              name: collectorset-controller
+              items:
+                - key: config.yaml
+                  path: config.yaml
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: collectorset-controller
+type: Opaque
+data:
+  accessID: 2ncvPufefCX9vtEL3Lx9
+  accessKey: ~27~WdH2qZwi(z86nux6~[Bf(9RW]yi2r6z[PCFS
+  account: cdkglobal
+  etcdDiscoveryToken: 
+  #to be validate proxy user and pass
+---
+
