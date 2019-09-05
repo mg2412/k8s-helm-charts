@@ -12,18 +12,12 @@ spec:
         app: collectorset-controller
     spec:
       serviceAccountName: collectorset-controller
-    {{- if .Values.affinity }}
       affinity:
-{{ toYaml .Values.affinity | indent 8 }}
-    {{- end }}
-    {{- if .Values.nodeSelector }}
       nodeSelector:
-{{ toYaml .Values.nodeSelector | indent 8 }}
-    {{- end }}
       containers:
       - name: collectorset-controller
-        image: "{{ .Values.imageRepository }}:{{ default "latest" .Values.imageTag }}"
-        imagePullPolicy: {{ .Values.imagePullPolicy }}
+        image: logicmonitor/collectorset-controller:latest.v1
+        imagePullPolicy: Always
         env:
         - name: ACCESS_ID
           valueFrom:
@@ -45,20 +39,7 @@ spec:
             secretKeyRef:
               name: collectorset-controller
               key: etcdDiscoveryToken
-        {{- if .Values.proxyUser }}
-        - name: PROXY_USER
-          valueFrom:
-            secretKeyRef:
-              name: collectorset-controller
-              key: proxyUser
-        {{- end }}
-        {{- if .Values.proxyPass }}
-        - name: PROXY_PASS
-          valueFrom:
-            secretKeyRef:
-              name: collectorset-controller
-              key: proxyPass
-        {{- end }}
+  # to vaslidate does proxy user and pass exist or not
         volumeMounts:
         - name: etc-collectorset-controller
           mountPath: "/etc/collectorset-controller"
