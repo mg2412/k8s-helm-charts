@@ -12,7 +12,8 @@ spec:
         app: argus
     spec:
       serviceAccountName: argus
-      affinity:#to be vaildated
+      affinity:
+      #to be vaildated
       nodeSelector:
       containers:
       - name: argus
